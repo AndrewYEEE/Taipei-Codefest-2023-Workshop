@@ -251,6 +251,7 @@ point0.buffer(1, resolution=1) #
 
 
 # crs (Coordinate Reference System)
+
 # 'EPSG:3826' : Taiwan, bounds: (119.99, 20.41, 122.06, 26.72)
 # - X[east]: Easting (metre)
 # - Y[north]: Northing (metre)
@@ -261,19 +262,118 @@ point0.buffer(1, resolution=1) #
 
 """
 # get 臺北市區界圖 from data.taipei
-URL = 'https://data.taipei/api/frontstage/tpeod/dataset/resource.download?rid=d8b7eb29-136f-49fc-b14b-3489d3656122'
+# URL = 'https://data.taipei/api/frontstage/tpeod/dataset/resource.download?rid=d8b7eb29-136f-49fc-b14b-3489d3656122'
 FILE_NAME = '.\Datasets\Raw\臺北市區界圖_20220915'
-district_border = gpd.read_file(FILE_NAME, encoding='utf-8')
-district_border.head(2)
+print("Input 臺北市區界圖")
+#直接整個資料夾讀入???
+district_border = gpd.read_file(FILE_NAME, encoding='utf-8') 
+print(district_border.head(2))
 
 # # change crs
-# district_border = district_border.to_crs('EPSG:3826') #轉台灣常用座標格式
+print("將臺北市區界圖 物件轉台灣常用座標格式")
+district_border.crs = 'EPSG:3826' #轉台灣常用座標格式
+print(district_border.head(2))
 
-# # get buffer
-# dis_longterm['buffer'] = dis_longterm['geometry'].buffer(1000) #回傳給定距離內所有點的近似表示。
-# print(dis_longterm.head(3))
-# buffer0 = dis_longterm.loc[0, 'buffer'] #獲取buffer第一筆
+print("將臺北市區界圖 物件轉全球通用座標格式")
+district_border = district_border.to_crs('EPSG:4326') #轉全球通用格式
+print(district_border.head(2))
 
+print("將臺北市區界圖 物件轉台灣常用座標格式")
+# change crs
+district_border = district_border.to_crs('EPSG:3826')
+
+
+print("將臺北市身障社區長照機構 物件加上geometry")
+# lambda是匿名Method需告
+# 以下等同於 
+# dis_longterm['geometry'][i] = Point( 
+#        geocoder.arcgis(dis_longterm['addr'][i]).json['lng'],
+#        geocoder.arcgis(dis_longterm['addr'][i]).json['lat']
+# )
+dis_longterm['geometry'] = dis_longterm['addr'].apply(
+    lambda x: Point(
+        geocoder.arcgis(x).json['lng'],
+        geocoder.arcgis(x).json['lat']
+    )
+)
+
+
+# from pd to gpd
+print("將臺北市身障社區長照機構 物件轉換為Geopandas物件")
+dis_longterm = gpd.GeoDataFrame(
+    dis_longterm,
+    crs='EPSG:4326'
+)
+print(dis_longterm.head(2))
+
+# change crs
+print("將臺北市身障社區長照機構 物件轉台灣常用座標格式")
+dis_longterm = dis_longterm.to_crs('EPSG:3826')
+print(dis_longterm.head(2))
+
+# get buffer
+print("以臺北市身障社區長照機構 物件之座標，以1km半徑，設置每個座標點的影響範圍")
+dis_longterm['buffer'] = dis_longterm['geometry'].buffer(1000)
+
+
+# get the districts that intersect with buffer0
+print("以臺北市身障社區長照機構 第一個座標範圍，看看臺北市區界(POLYGON)是否重疊")
+buffer0 = dis_longterm.loc[0, 'buffer'] 
+idx = buffer0.intersects(district_border['geometry']) #以第一筆交互所有資料的座標看有無重疊
+print(idx) #有11筆資料，True者重疊
+print('- '* 20)
+print("獲取重疊的地區名稱")
+print(district_border[idx].PTNAME.tolist()) #獲取重疊的地區名稱
+
+
+print("擷取臺北市身障社區長照機構物件之 機構名稱 與 座標範圍 ")
+dis_longterm_buffer = dis_longterm[['name', 'buffer']]
+print(dis_longterm_buffer)
+
+print("透過set_geometry()讓geopandas知道 buffer 欄位是座標點，以方便overlay計算")
+dis_longterm_buffer = dis_longterm_buffer.set_geometry('buffer')
+print(dis_longterm_buffer)
+
+
+# overlay()用於計算兩個GeoDataFrame(可以當作地圖)，並依據how條件決定回傳的區域清單
+# how=union : 將所有區域回傳
+# how=intersection : 只回傳重疊區域
+# how=symmetric_difference : 回傳沒有重疊的部分
+# 簡單來說，就是給它兩張地圖，它將兩張地圖疊起來，然後給你合起來的地圖。
+print("獲取 臺北市身障社區長照機構 + 臺北市區界圖 疊起來後的座標清單 (應該是為了確認在地圖上確實有該機構位置)")
+overlay_df = gpd.overlay(
+    dis_longterm_buffer,
+    district_border,
+    how='union'
+).explode().reset_index()
+# 由於重疊在一起的區域，預設會以"MULTIPOLYGON(可以當作三維空間，POLYGON是二維，很多個POLYGON疊在一起)"回傳，
+# 回傳的清單會二維三維混在一起，會很混亂，因此如果想要回傳的結果都是POLYGON，則使用.explode().reset_index()
+
+"""
+ex: 原始回傳:
+    df1	df2	geometry
+0	1.0	1.0	POLYGON ((2.00000 2.00000, 2.00000 1.00000, 1....
+1	2.0	1.0	POLYGON ((2.00000 2.00000, 2.00000 3.00000, 3....
+2	2.0	2.0	POLYGON ((4.00000 4.00000, 4.00000 3.00000, 3....
+3	1.0	NaN	POLYGON ((2.00000 0.00000, 0.00000 0.00000, 0....
+4	2.0	NaN	MULTIPOLYGON (((3.00000 3.00000, 4.00000 3.000...
+5	NaN	1.0	MULTIPOLYGON (((2.00000 2.00000, 3.00000 2.000...
+6	NaN	2.0	POLYGON ((3.00000 5.00000, 5.00000 5.00000, 5....
+
+透過.explode().reset_index()攤開:
+	level_0	level_1	df1	df2	geometry
+0		0	   0	1.0	1.0	POLYGON ((2.00000 2.00000, 2.00000 1.00000, 1....
+1		1	   0	2.0	1.0	POLYGON ((2.00000 2.00000, 2.00000 3.00000, 3....
+2		2	   0	2.0	2.0	POLYGON ((4.00000 4.00000, 4.00000 3.00000, 3....
+3		3	   0	1.0	NaN	POLYGON ((2.00000 0.00000, 0.00000 0.00000, 0....
+4		4	   0	2.0	NaN	POLYGON ((3.00000 3.00000, 4.00000 3.00000, 4....
+5		4	   1	2.0	NaN	POLYGON ((3.00000 3.00000, 2.00000 3.00000, 2....
+6		5	   0	NaN	1.0	POLYGON ((2.00000 2.00000, 3.00000 2.00000, 3....
+7		5	   1	NaN	1.0	POLYGON ((2.00000 2.00000, 1.00000 2.00000, 1....
+8		6	   0	NaN	2.0	POLYGON ((3.00000 5.00000, 5.00000 5.00000, 5....
+"""
+
+print(overlay_df)
 
 
 print("本範例缺點: ")
