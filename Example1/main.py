@@ -143,6 +143,7 @@ disability_welfare.head()
 OUTPUT_FILENAME = 'disability_welfare_over_the_years.csv'
 disability_welfare.to_csv(OUTPUT_FILENAME, index=False, encoding='UTF-8')
 
+print("  ")
 print("本範例缺點: ")
 print("1. 並沒有排除NaN欄位或初始化NaN欄位")
 print("2. 中途由於NaN，將欄位值皆轉float，但實際上應該要先檢查欄位是否適合轉float")
