@@ -408,8 +408,14 @@ results = {
 }
 print(results)
 
-# with open('dis_friendly_institution.json', "w") as json_file:
-#     json.dump(results, json_file, ensure_ascii=False)
+with open('dis_friendly_institution.json', "w",encoding='utf8') as json_file:
+    json.dump(results, json_file, ensure_ascii=False)
+
+
+stat = dis_friendly_institution['type'].unique()
+print(stat)
+
+
 print("  ")
 print("本範例缺點: ")
 print("1. 作者是因為知道 '臺北市身障社區長照機構' 資料就剩下四列，所以code欄位直接塞4個值上去，實際應用時不應該這麼做")
