@@ -348,7 +348,7 @@ print(dis_longterm.head(10))
 print("將 臺北市身障設施 物件中'geometry'座標POINT替換成1km範圍POLYGON")
 dis_institution['geometry'] = dis_institution['geometry'].buffer(1000) 
 dis_institution = dis_institution.to_crs('EPSG:4326')
-print(dis_institution)
+
 
 # concat(,設定): 默認情況下是縱向(直向)連接兩個DataFrame
 # axis=0 為直向合併
@@ -359,6 +359,7 @@ print(dis_institution)
 print("將 '臺北市身障設施' 與 '臺北市身障社區長照機構' 組合，後者放下面，空值補NaN")
 dis_friendly_institution = pd.concat([dis_institution, dis_longterm])
 dis_friendly_institution.to_crs('EPSG:4326') #Warning叫我這樣做
+print(dis_friendly_institution)
 
 print("匯出dis_origin_radius.geojson")
 dis_friendly_institution.to_file(
@@ -368,6 +369,9 @@ dis_friendly_institution.to_file(
 
 print("將 組合 物件中，'geometry'替換成每個POLYGON的中心點座標POINT")
 dis_friendly_institution['geometry'] = dis_friendly_institution['geometry'].centroid
+print(dis_friendly_institution)
+
+
 
 print("匯出dis_origin_center.geojson")
 dis_friendly_institution.to_file(

@@ -1,0 +1,18 @@
+{
+"type": "FeatureCollection",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "town": "北投區", "nums": 4 }, "geometry": { "type": "Point", "coordinates": [ 121.517495695173537, 25.147862270460084 ] } },
+{ "type": "Feature", "properties": { "town": "士林區", "nums": 2 }, "geometry": { "type": "Point", "coordinates": [ 121.552166842893357, 25.125834370673985 ] } },
+{ "type": "Feature", "properties": { "town": "內湖區", "nums": 1 }, "geometry": { "type": "Point", "coordinates": [ 121.592386654529022, 25.083766238161282 ] } },
+{ "type": "Feature", "properties": { "town": "中山區", "nums": 10 }, "geometry": { "type": "Point", "coordinates": [ 121.538391444001761, 25.069824484510978 ] } },
+{ "type": "Feature", "properties": { "town": "大同區", "nums": 10 }, "geometry": { "type": "Point", "coordinates": [ 121.513378201077288, 25.064039041284975 ] } },
+{ "type": "Feature", "properties": { "town": "松山區", "nums": 8 }, "geometry": { "type": "Point", "coordinates": [ 121.557651376791611, 25.05976542557498 ] } },
+{ "type": "Feature", "properties": { "town": "南港區", "nums": 2 }, "geometry": { "type": "Point", "coordinates": [ 121.609627640973699, 25.036041868982121 ] } },
+{ "type": "Feature", "properties": { "town": "中正區", "nums": 3 }, "geometry": { "type": "Point", "coordinates": [ 121.51991941315093, 25.032248794247398 ] } },
+{ "type": "Feature", "properties": { "town": "信義區", "nums": 11 }, "geometry": { "type": "Point", "coordinates": [ 121.571602938483579, 25.030761601263524 ] } },
+{ "type": "Feature", "properties": { "town": "萬華區", "nums": 6 }, "geometry": { "type": "Point", "coordinates": [ 121.497321014110611, 25.029236149720955 ] } },
+{ "type": "Feature", "properties": { "town": "大安區", "nums": 11 }, "geometry": { "type": "Point", "coordinates": [ 121.543437566021822, 25.026821063178094 ] } },
+{ "type": "Feature", "properties": { "town": "文山區", "nums": 7 }, "geometry": { "type": "Point", "coordinates": [ 121.573935255279835, 24.988614273487968 ] } }
+]
+}
