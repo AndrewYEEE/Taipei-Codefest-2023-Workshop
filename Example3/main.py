@@ -139,9 +139,12 @@ Business_Count = Business_Count.explode('business').reset_index()
 
 
 #將 組合 物件依據區域分群
-stat = Business_Count.groupby('business').size().to_dict()
+stat = Business_Count.groupby('business').size().sort_values(ascending=False)
+print(stat)
+stat = stat.to_dict()
 specified_order = Business_Count['business'].unique()
-
+for x in stat:
+    print("\""+x+"\",")
 
 results = {
     'data': [
@@ -152,15 +155,19 @@ results = {
                     'x': x,
                     'y': stat[x]
                 }
-                for x in specified_order
+                for x in stat
             ]
         }
     ]
 }
 
-
+print(results)
 with open('accessibility_job_business_num.json', "w",encoding='utf8') as json_file:
     json.dump(results, json_file, ensure_ascii=False)
+
+
+
+
 
 
 print("OUTPUT2 : 依據行政區統計機構數量")
@@ -193,45 +200,30 @@ with open('accessibility_job_institution_num.json', "w",encoding='utf8') as json
 
 
 print("ETL7 : 將地址加以解析經緯度座標 (這個要一點時間，它查一個座標蠻久的)")
-# 顯以第一個地址嘗試獲取經緯度座標
-# addr_0 = Practice_accessibility_job_C.loc[0, 'address'] #獲取地址欄位的第一筆資料
-# addr_0_info = geocoder.arcgis(addr_0) #查詢座標資訊
-# print(addr_0_info.json)
-# addr_0_lng = addr_0_info.json['lng']
-# addr_0_lat = addr_0_info.json['lat']
-# point0 = Point(addr_0_lng, addr_0_lat) #製作座標點0
-# print(point0.area) #製作座標點面積
-# print(point0.bounds) # minx, miny, maxx, maxy #製作座標點面積範圍
-# print(point0.geom_type) #座標類型 (Points、Lines、Polygons)
+Practice_accessibility_job_C['geometry'] = Practice_accessibility_job_C['address'].apply(
+    lambda x: Point(
+        geocoder.arcgis(x).json['lng'],
+        geocoder.arcgis(x).json['lat']
+    )
+)
 
 
-# Practice_accessibility_job_C['geometry'] = Practice_accessibility_job_C['address'].apply(
-#     lambda x: Point(
-#         geocoder.arcgis(x).json['lng'],
-#         geocoder.arcgis(x).json['lat']
-#     )
-# )
-
-
-# # from pd to gpd
-# Practice_accessibility_job_GEO = gpd.GeoDataFrame(
-#     Practice_accessibility_job_C,
-#     crs='EPSG:4326'
-# )
-# print(Practice_accessibility_job_GEO)
-
-# print("OUTPUT3 : 各機構標準訊息與座標點")
-# Practice_accessibility_job_GEO.to_file(
-#     'accessibility_job_institution_geo.geojson',
-#     driver='GeoJSON'
-# )
+# from pd to gpd
+Practice_accessibility_job_GEO = gpd.GeoDataFrame(
+    Practice_accessibility_job_C,
+    crs='EPSG:4326'
+)
+print(Practice_accessibility_job_GEO)
 
 
 
+print("OUTPUT3-1 : 各機構標準訊息與座標點")
+Practice_accessibility_job_GEO.to_file(
+    'accessibility_job_institution_geo.geojson',
+    driver='GeoJSON'
+)
 
-
-
-print("OUTPUT4 : 依據各行政區機構數量製作座標圖")
+print("OUTPUT3-2 : 依據各行政區機構數量製作座標圖")
 FILE_NAME = '.\Datasets\Raw\臺北市區界圖_20220915'
 district_border = gpd.read_file(FILE_NAME, encoding='utf-8') 
 district_border.crs = 'EPSG:3826' #轉台灣常用座標格式
@@ -245,9 +237,16 @@ district_border.to_file(
     driver='GeoJSON'
 )
 
+# 注意: 每種座標系統對distance的單位與運算不同，切換成以"m"為單位的座標系統，這樣buffer才能正常運作
+district_border = district_border.to_crs('EPSG:3826')
 
 district_border['geometry'] = district_border['geometry'].centroid
+print(district_border)
 
+district_border['geometry'] = district_border['geometry'].buffer(200, resolution=2) #繪製mutlipolygon，為了Mapbox的3D效果
+
+district_border = district_border.to_crs('EPSG:4326')
+print(district_border)
 
 
 
@@ -265,3 +264,53 @@ district_border.to_file(
     'district_institution_geo.geojson',
     driver='GeoJSON'
 )
+
+
+
+
+
+print("OUTPUT4-1 : 依照服務類型攤開，製作各機構標準訊息與座標點")
+#依據行政區分群，然後再依據服務類型分群
+Business_Count_By_Town_GEO = Practice_accessibility_job_GEO.copy()
+# 先將business item轉換成List
+Business_Count_By_Town_GEO['business']=Business_Count_By_Town_GEO['business item'].str.split("、")
+# 依據List擴展出來
+Business_Count_By_Town_GEO = Business_Count_By_Town_GEO.explode('business').reset_index()
+Business_Count_By_Town_GEO.drop(['index','year','business item','type'], axis=1, inplace=True) 
+Business_Count_By_Town_GEO.to_file(
+    'business_count_by_town_geo.geojson',
+    driver='GeoJSON'
+)
+
+
+print("ETL8: 統計各行政區的服務類型數量")
+Business_Count_By_Town = Practice_accessibility_job_C[['business item','town']].copy()
+# 先將business item轉換成List
+Business_Count_By_Town['business']=Business_Count_By_Town['business item'].str.split("、")
+# 依據List擴展出來
+Business_Count_By_Town = Business_Count_By_Town.explode('business').reset_index()
+stat = Business_Count_By_Town.groupby(['business'])
+specified_order = [
+    '北投區', '士林區', '內湖區', '南港區',
+    '松山區', '信義區', '中山區', '大同區',
+    '中正區', '萬華區', '大安區', '文山區'
+]
+business_order = Business_Count_By_Town['business'].unique()
+result = {}
+result['data'] = []
+for x in business_order :
+    bus_data = []
+    stat1 = stat.get_group(x).groupby(['town']).size().to_dict()   
+    for y in specified_order:
+        if y in stat1:
+            bus_data.append(stat1[y])
+        else:
+            bus_data.append(0)
+    bus_ele = {
+        'name': x,
+        'data':  bus_data
+    }
+    result['data'].append(bus_ele)
+
+with open('business_count_by_town.json', "w",encoding='utf8') as json_file:
+    json.dump(result, json_file, ensure_ascii=False)
